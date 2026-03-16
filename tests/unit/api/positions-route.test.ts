@@ -8,8 +8,8 @@ import {
 
 describe("/api/positions", () => {
   it("aggregates positions from current ledger trades", async () => {
-    clearLedgerForTests();
-    appendTrade({
+    await clearLedgerForTests();
+    await appendTrade({
       id: "p-1",
       asset: { symbol: "AAPL", market: "NASDAQ", currency: "USD" },
       side: "BUY",
@@ -20,7 +20,7 @@ describe("/api/positions", () => {
       settlementDate: "2026-03-03",
       fxRateToKrw: 1320,
     });
-    appendTrade({
+    await appendTrade({
       id: "p-2",
       asset: { symbol: "AAPL", market: "NASDAQ", currency: "USD" },
       side: "SELL",

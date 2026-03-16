@@ -3,6 +3,10 @@ import { z } from "zod";
 import type { StoredTrade } from "@/src/server/ledger/types";
 
 const tradeDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+function isValidDateString(value: string): boolean {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime());
+}
 
 export const manualTradeInputSchema = z.object({
   id: z.string().min(1).optional(),
@@ -13,8 +17,8 @@ export const manualTradeInputSchema = z.object({
   quantity: z.number().positive(),
   priceOriginal: z.number().positive(),
   feeOriginal: z.number().min(0),
-  tradeDate: z.string().regex(tradeDatePattern),
-  settlementDate: z.string().regex(tradeDatePattern),
+  tradeDate: z.string().regex(tradeDatePattern).refine(isValidDateString),
+  settlementDate: z.string().regex(tradeDatePattern).refine(isValidDateString),
   fxRateToKrw: z.number().positive(),
 });
 

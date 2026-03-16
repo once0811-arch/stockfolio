@@ -2,6 +2,18 @@ import { buildPositionSnapshot } from "@/src/domain/ledger/build-position-snapsh
 import type { LedgerTrade } from "@/src/domain/ledger/types";
 import type { PositionSummary, StoredTrade } from "@/src/server/ledger/types";
 
+function round(value: number, digits = 8): number {
+  return Number(value.toFixed(digits));
+}
+
+function truncateTowardZero(value: number, digits = 2): number {
+  const unit = 10 ** digits;
+  if (value >= 0) {
+    return Math.floor(value * unit) / unit;
+  }
+  return Math.ceil(value * unit) / unit;
+}
+
 function toLedgerTrade(trade: StoredTrade): LedgerTrade {
   return {
     id: trade.id,
@@ -44,6 +56,14 @@ export function buildPositionsFromTrades(
       trades: sorted.map(toLedgerTrade),
       marketPriceOriginal,
     });
+    const currentValueOriginal = round(snapshot.openQuantity * marketPriceOriginal);
+    const unrealizedPnlRatePct =
+      snapshot.remainingCostOriginal === 0
+        ? 0
+        : truncateTowardZero(
+            (snapshot.unrealizedPnlOriginal / snapshot.remainingCostOriginal) * 100,
+            2,
+          );
 
     positions.push({
       symbol: latest.asset.symbol,
@@ -52,8 +72,11 @@ export function buildPositionsFromTrades(
       openQuantity: snapshot.openQuantity,
       averageCostOriginal: snapshot.averageCostOriginal,
       remainingCostOriginal: snapshot.remainingCostOriginal,
+      marketPriceOriginal,
+      currentValueOriginal,
       realizedPnlOriginal: snapshot.realizedPnlOriginal,
       unrealizedPnlOriginal: snapshot.unrealizedPnlOriginal,
+      unrealizedPnlRatePct,
     });
   }
 

@@ -7,10 +7,10 @@ import {
 } from "@/src/server/ledger/in-memory-ledger";
 
 describe("in-memory ledger", () => {
-  it("appends immutable manual trades and lists them in insertion order", () => {
-    clearLedgerForTests();
+  it("appends immutable manual trades and lists them in insertion order", async () => {
+    await clearLedgerForTests();
 
-    const first = appendTrade({
+    const first = await appendTrade({
       id: "trade-1",
       asset: { symbol: "AAPL", market: "NASDAQ", currency: "USD" },
       side: "BUY",
@@ -21,7 +21,7 @@ describe("in-memory ledger", () => {
       settlementDate: "2026-03-03",
       fxRateToKrw: 1320,
     });
-    const second = appendTrade({
+    const second = await appendTrade({
       id: "trade-2",
       asset: { symbol: "AAPL", market: "NASDAQ", currency: "USD" },
       side: "SELL",
@@ -33,17 +33,17 @@ describe("in-memory ledger", () => {
       fxRateToKrw: 1325,
     });
 
-    const trades = listTrades();
+    const trades = await listTrades();
 
     expect(trades).toHaveLength(2);
     expect(trades[0]).toEqual(first);
     expect(trades[1]).toEqual(second);
   });
 
-  it("throws on duplicate trade id", () => {
-    clearLedgerForTests();
+  it("throws on duplicate trade id", async () => {
+    await clearLedgerForTests();
 
-    appendTrade({
+    await appendTrade({
       id: "dup-1",
       asset: { symbol: "TSLA", market: "NASDAQ", currency: "USD" },
       side: "BUY",
@@ -55,7 +55,7 @@ describe("in-memory ledger", () => {
       fxRateToKrw: 1320,
     });
 
-    expect(() =>
+    await expect(
       appendTrade({
         id: "dup-1",
         asset: { symbol: "TSLA", market: "NASDAQ", currency: "USD" },
@@ -67,6 +67,6 @@ describe("in-memory ledger", () => {
         settlementDate: "2026-03-03",
         fxRateToKrw: 1320,
       }),
-    ).toThrowError("Trade id already exists");
+    ).rejects.toThrowError("Trade id already exists");
   });
 });

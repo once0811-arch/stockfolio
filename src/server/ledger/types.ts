@@ -23,6 +23,9 @@ export type PositionSummary = {
   openQuantity: number;
   averageCostOriginal: number;
   remainingCostOriginal: number;
+  marketPriceOriginal: number;
+  currentValueOriginal: number;
   realizedPnlOriginal: number;
   unrealizedPnlOriginal: number;
+  unrealizedPnlRatePct: number;
 };

@@ -22,6 +22,24 @@ enum TradeSourceType {
   IMPORTED
 }
 
+enum MemoLifecycleStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ReviewOutcome {
+  UNRESOLVED
+  CORRECT
+  PARTIALLY_CORRECT
+  INCORRECT
+}
+
+enum FactCheckStatus {
+  NOT_RUN
+  PENDING
+  COMPLETED
+}
+
 model User {
   id          String      @id @default(cuid())
   email       String      @unique
@@ -39,10 +57,12 @@ model Portfolio {
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   brokerAccounts BrokerAccount[]
   trades        Trade[]
+  memos         Memo[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
   @@index([userId])
+  @@unique([userId, name])
 }
 
 model BrokerAccount {
@@ -57,6 +77,7 @@ model BrokerAccount {
   updatedAt   DateTime  @updatedAt
 
   @@index([portfolioId])
+  @@unique([portfolioId, accountAlias])
 }
 
 model Asset {
@@ -90,10 +111,31 @@ model Trade {
   portfolio     Portfolio       @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   account       BrokerAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   asset         Asset           @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  memos         Memo[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
   @@index([portfolioId, tradeDate])
   @@index([accountId, settlementDate])
   @@index([assetId, settlementDate])
+}
+
+model Memo {
+  id               String             @id @default(cuid())
+  portfolioId      String
+  tradeId          String?
+  symbol           String
+  thesisText       String
+  status           MemoLifecycleStatus @default(ACTIVE)
+  reviewOutcome    ReviewOutcome      @default(UNRESOLVED)
+  retrospectiveNote String?
+  factCheckStatus  FactCheckStatus    @default(NOT_RUN)
+  citationCount    Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  portfolio        Portfolio          @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  trade            Trade?             @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+
+  @@index([portfolioId, symbol, createdAt])
+  @@index([portfolioId, tradeId])
 }
