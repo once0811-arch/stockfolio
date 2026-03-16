@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TradeSide {
+  BUY
+  SELL
+  DIVIDEND
+  FEE
+  FX_ADJUSTMENT
+  LENDING_INCOME
+}
+
+enum TradeSourceType {
+  MANUAL
+  CSV
+  IMPORTED
+}
+
+model User {
+  id          String      @id @default(cuid())
+  email       String      @unique
+  displayName String?
+  portfolios  Portfolio[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Portfolio {
+  id            String          @id @default(cuid())
+  userId        String
+  name          String
+  baseCurrency  String          @default("KRW")
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brokerAccounts BrokerAccount[]
+  trades        Trade[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model BrokerAccount {
+  id          String    @id @default(cuid())
+  portfolioId String
+  brokerName  String
+  accountAlias String
+  baseCurrency String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  trades      Trade[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([portfolioId])
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  symbol    String
+  market    String
+  name      String?
+  currency  String
+  trades    Trade[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([symbol, market])
+}
+
+model Trade {
+  id            String          @id @default(cuid())
+  portfolioId   String
+  accountId     String
+  assetId       String
+  side          TradeSide
+  quantity      Decimal         @db.Decimal(24, 8)
+  priceOriginal Decimal         @db.Decimal(24, 8)
+  feeOriginal   Decimal         @db.Decimal(24, 8)
+  currency      String
+  tradeDate     DateTime
+  settlementDate DateTime
+  fxRateToKrw   Decimal         @db.Decimal(18, 8)
+  sourceType    TradeSourceType @default(MANUAL)
+  rawPayloadJson Json?
+  portfolio     Portfolio       @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  account       BrokerAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  asset         Asset           @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([portfolioId, tradeDate])
+  @@index([accountId, settlementDate])
+  @@index([assetId, settlementDate])
+}
