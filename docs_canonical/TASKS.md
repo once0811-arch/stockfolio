@@ -7,7 +7,7 @@
 - [x] canonical authority 확정
 - [x] M0 ExecPlan 작성
 - [x] 기술 표준 v1 확정
-- [x] M0 scaffold 구현(Next.js/Auth.js/Prisma/Vitest/Playwright)
+- [x] M0 scaffold 구현(Next.js/Prisma/Vitest/Playwright, 로컬 무인증 모드)
 - [x] M1 1차 구현(거래 원장 포지션 재구성 계산 엔진 + 회귀 테스트)
 
 ## P0: Harness 안정화(문서 운영)
@@ -25,8 +25,8 @@
 
 ## P1: 제품 구현 마일스톤(PRD 기준)
 1. M0 Harness-ready scaffold
-- Auth/Next.js/Prisma 초기 스캐폴드
-- protected route/base layout
+- Next.js/Prisma 초기 스캐폴드
+- local no-auth 개발 라우트/base layout
 
 2. M1 Trade ledger + position engine
 - 거래 CRUD/CSV import

@@ -12,10 +12,7 @@ export default defineConfig({
   webServer: {
     command: "pnpm run dev --hostname localhost --port 3001",
     url: "http://localhost:3001",
-    env: {
-      NEXTAUTH_URL: "http://localhost:3001",
-    },
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 120000,
   },
 });
