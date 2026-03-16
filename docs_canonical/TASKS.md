@@ -8,6 +8,7 @@
 - [x] M0 ExecPlan 작성
 - [x] 기술 표준 v1 확정
 - [x] M0 scaffold 구현(Next.js/Auth.js/Prisma/Vitest/Playwright)
+- [x] M1 1차 구현(거래 원장 포지션 재구성 계산 엔진 + 회귀 테스트)
 
 ## P0: Harness 안정화(문서 운영)
 1. Workflow 운영 규약 보강

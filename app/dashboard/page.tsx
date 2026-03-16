@@ -18,9 +18,14 @@ export default async function DashboardPage() {
       <p>
         Signed in as <strong>{session.user?.email ?? "unknown user"}</strong>
       </p>
-      <Link className="action-link" href="/">
-        홈으로
-      </Link>
+      <div className="actions">
+        <Link className="action-link" href="/transactions">
+          거래 관리
+        </Link>
+        <Link className="action-link" href="/">
+          홈으로
+        </Link>
+      </div>
     </div>
   );
 }

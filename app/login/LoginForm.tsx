@@ -17,18 +17,14 @@ export function LoginForm() {
     const result = await signIn("credentials", {
       email,
       password,
-      redirect: false,
       callbackUrl: "/dashboard",
+      redirect: true,
     });
 
-    setPending(false);
-
-    if (!result || result.error) {
+    if (result?.error) {
+      setPending(false);
       setError("로그인에 실패했습니다. 환경변수 계정을 확인하세요.");
-      return;
     }
-
-    window.location.assign(result.url ?? "/dashboard");
   }
 
   return (

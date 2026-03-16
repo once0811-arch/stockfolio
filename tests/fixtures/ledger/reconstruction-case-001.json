@@ -1,0 +1,43 @@
+{
+  "trades": [
+    {
+      "id": "t1",
+      "side": "BUY",
+      "quantity": 10,
+      "priceOriginal": 100,
+      "feeOriginal": 1,
+      "currency": "USD",
+      "tradeDate": "2026-01-02T00:00:00.000Z",
+      "settlementDate": "2026-01-04T00:00:00.000Z",
+      "fxRateToKrw": 1300
+    },
+    {
+      "id": "t2",
+      "side": "BUY",
+      "quantity": 5,
+      "priceOriginal": 120,
+      "feeOriginal": 1,
+      "currency": "USD",
+      "tradeDate": "2026-01-10T00:00:00.000Z",
+      "settlementDate": "2026-01-12T00:00:00.000Z",
+      "fxRateToKrw": 1310
+    },
+    {
+      "id": "t3",
+      "side": "SELL",
+      "quantity": 8,
+      "priceOriginal": 130,
+      "feeOriginal": 1,
+      "currency": "USD",
+      "tradeDate": "2026-02-01T00:00:00.000Z",
+      "settlementDate": "2026-02-03T00:00:00.000Z",
+      "fxRateToKrw": 1320
+    }
+  ],
+  "expected": {
+    "openQuantity": 7,
+    "averageCostOriginal": 106.8,
+    "remainingCostOriginal": 747.6,
+    "realizedPnlOriginal": 184.6
+  }
+}
