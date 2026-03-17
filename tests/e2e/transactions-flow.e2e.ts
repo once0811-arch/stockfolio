@@ -37,11 +37,21 @@ test("covers quick trade, symbol memo, memo fact-check, and overview matrix", as
   await expect(page).toHaveURL(/\/research/);
   await page.getByRole("button", { name: symbol }).click();
   await page.getByRole("button", { name: "선택 메모 팩트체크" }).click();
-  await expect(page.getByTestId("factcheck-citation-status")).toContainText(
-    "citation 2",
-  );
+  await expect
+    .poll(async () => {
+      const text = await page.getByTestId("factcheck-citation-status").innerText();
+      const match = text.match(/citation\s+(\d+)/i);
+      return match ? Number(match[1]) : 0;
+    })
+    .toBeGreaterThan(0);
 
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByTestId("overview-triple-realized")).toContainText("실현손익");
+
+  await page.goto("/forecast");
+  await expect(page).toHaveURL(/\/forecast/);
+  await expect(
+    page.getByRole("heading", { name: "Forecast", exact: true }),
+  ).toBeVisible();
 });

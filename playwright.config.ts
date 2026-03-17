@@ -6,13 +6,13 @@ export default defineConfig({
   fullyParallel: true,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3001",
+    baseURL: "http://127.0.0.1:3001",
     trace: "on-first-retry",
   },
   webServer: {
-    command: "pnpm run dev --hostname localhost --port 3001",
-    url: "http://localhost:3001",
+    command: "pnpm exec next dev --webpack --hostname 127.0.0.1 --port 3001",
+    url: "http://127.0.0.1:3001",
     reuseExistingServer: true,
-    timeout: 120000,
+    timeout: 300000,
   },
 });

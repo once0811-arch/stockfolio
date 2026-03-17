@@ -99,7 +99,8 @@ async function appendMemoToPostgres(input: CreateMemoInput): Promise<StoredMemo>
       "reviewOutcome",
       "retrospectiveNote",
       "factCheckStatus",
-      "citationCount"
+      "citationCount",
+      "updatedAt"
     )
     VALUES (
       ${input.id ?? crypto.randomUUID()},
@@ -107,11 +108,12 @@ async function appendMemoToPostgres(input: CreateMemoInput): Promise<StoredMemo>
       ${input.tradeId ?? null},
       ${input.symbol.toUpperCase()},
       ${input.thesisText},
-      ${input.status ?? "ACTIVE"},
-      ${input.reviewOutcome ?? "UNRESOLVED"},
+      ${input.status ?? "ACTIVE"}::"MemoLifecycleStatus",
+      ${input.reviewOutcome ?? "UNRESOLVED"}::"ReviewOutcome",
       ${input.retrospectiveNote ?? null},
-      ${input.factCheckStatus ?? "NOT_RUN"},
-      ${input.citationCount ?? 0}
+      ${input.factCheckStatus ?? "NOT_RUN"}::"FactCheckStatus",
+      ${input.citationCount ?? 0},
+      ${new Date()}
     )
     RETURNING
       "id",
@@ -251,16 +253,16 @@ async function updateMemoInPostgres(
     updates.push(Prisma.sql`"thesisText" = ${patch.thesisText}`);
   }
   if (patch.status !== undefined) {
-    updates.push(Prisma.sql`"status" = ${patch.status}`);
+    updates.push(Prisma.sql`"status" = ${patch.status}::"MemoLifecycleStatus"`);
   }
   if (patch.reviewOutcome !== undefined) {
-    updates.push(Prisma.sql`"reviewOutcome" = ${patch.reviewOutcome}`);
+    updates.push(Prisma.sql`"reviewOutcome" = ${patch.reviewOutcome}::"ReviewOutcome"`);
   }
   if (patch.retrospectiveNote !== undefined) {
     updates.push(Prisma.sql`"retrospectiveNote" = ${patch.retrospectiveNote}`);
   }
   if (patch.factCheckStatus !== undefined) {
-    updates.push(Prisma.sql`"factCheckStatus" = ${patch.factCheckStatus}`);
+    updates.push(Prisma.sql`"factCheckStatus" = ${patch.factCheckStatus}::"FactCheckStatus"`);
   }
   if (patch.citationCount !== undefined) {
     updates.push(Prisma.sql`"citationCount" = ${patch.citationCount}`);
@@ -348,6 +350,10 @@ export async function updateMemo(
 
 export async function clearMemosForTests(): Promise<void> {
   getRuntimeState().memoLedger.length = 0;
+
+  if (process.env.NODE_ENV === "test" || !shouldUsePostgresByPolicy()) {
+    return;
+  }
 
   if (getPersistenceMode() === "memory") {
     return;

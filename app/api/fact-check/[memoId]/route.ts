@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 
-import {
-  findMemoById,
-  updateMemo,
-} from "@/src/server/memos/in-memory-memos";
+import { findMemoById } from "@/src/server/memos/in-memory-memos";
+import { createFactCheckRunWithCitations } from "@/src/server/research/fact-check-store";
+import type { CitationStance } from "@/src/server/research/types";
 
 type RouteContext = {
   params: Promise<{
@@ -38,21 +37,58 @@ export async function POST(_request: Request, context: RouteContext) {
       { title: `${memo.symbol} 관련 최신 뉴스`, source: "News Feed" },
     ],
     confidence: 0.68,
-    citationCount: 2,
     disclaimer: "금융 정보 제공 목적이며 투자 자문이 아닙니다.",
   };
 
-  const updated = await updateMemo(memoId, {
-    factCheckStatus: "COMPLETED",
-    citationCount: factCheck.citationCount,
-  });
+  const citations = [
+    ...factCheck.supporting_evidence.map((item) => ({
+      title: item.title,
+      source: item.source,
+      stance: "SUPPORTING" as CitationStance,
+    })),
+    ...factCheck.contradicting_evidence.map((item) => ({
+      title: item.title,
+      source: item.source,
+      stance: "CONTRADICTING" as CitationStance,
+    })),
+    ...factCheck.related_news.map((item) => ({
+      title: item.title,
+      source: item.source,
+      stance: "RELATED_NEWS" as CitationStance,
+    })),
+  ];
 
-  if (!updated) {
-    return NextResponse.json({ error: "Memo not found" }, { status: 404 });
+  let persisted: Awaited<ReturnType<typeof createFactCheckRunWithCitations>>;
+  try {
+    persisted = await createFactCheckRunWithCitations({
+      memoId,
+      model: "demo-fact-check-v1",
+      confidence: factCheck.confidence,
+      disclaimer: factCheck.disclaimer,
+      claims: factCheck.claims,
+      citations,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Memo not found") {
+      return NextResponse.json({ error: "Memo not found" }, { status: 404 });
+    }
+    throw error;
   }
 
+  const citationCount = persisted.citations.length;
+
   return NextResponse.json({
-    memo: updated,
-    factCheck,
+    memo: persisted.memo,
+    factCheck: {
+      ...factCheck,
+      citationCount,
+      citations: persisted.citations.map((item) => ({
+        title: item.title,
+        source: item.source,
+        url: item.url ?? undefined,
+        publishedAt: item.publishedAt ?? undefined,
+        stance: item.stance,
+      })),
+    },
   });
 }

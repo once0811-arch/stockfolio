@@ -1,10 +1,18 @@
 import type { StoredTrade } from "@/src/server/ledger/types";
 import type { StoredMemo } from "@/src/server/memos/types";
+import type { StoredGoalMetric } from "@/src/server/goals/types";
+import type {
+  StoredFactCheckRun,
+  StoredSourceCitation,
+} from "@/src/server/research/types";
 
 type RuntimeState = {
   tradeLedger: StoredTrade[];
   hasSeededDemoPortfolio: boolean;
   memoLedger: StoredMemo[];
+  goalMetrics: StoredGoalMetric[];
+  factCheckRuns: StoredFactCheckRun[];
+  sourceCitations: StoredSourceCitation[];
 };
 
 declare global {
@@ -16,6 +24,9 @@ function createRuntimeState(): RuntimeState {
     tradeLedger: [],
     hasSeededDemoPortfolio: false,
     memoLedger: [],
+    goalMetrics: [],
+    factCheckRuns: [],
+    sourceCitations: [],
   };
 }
 

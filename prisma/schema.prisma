@@ -40,6 +40,30 @@ enum FactCheckStatus {
   COMPLETED
 }
 
+enum GoalMetricKey {
+  REALIZED_PNL
+  DIVIDEND
+  AFTER_TAX_NET_PROFIT
+  LENDING_INCOME
+  CASH_FLOW
+}
+
+enum TaxLotMethod {
+  AVERAGE_COST
+  FIFO
+  LIFO
+}
+
+enum FactCheckRunStatus {
+  COMPLETED
+}
+
+enum CitationStance {
+  SUPPORTING
+  CONTRADICTING
+  RELATED_NEWS
+}
+
 model User {
   id          String      @id @default(cuid())
   email       String      @unique
@@ -58,6 +82,10 @@ model Portfolio {
   brokerAccounts BrokerAccount[]
   trades        Trade[]
   memos         Memo[]
+  goalMetrics   GoalMetric[]
+  taxRuleSets   TaxRuleSet[]
+  factCheckRuns FactCheckRun[]
+  sourceCitations SourceCitation[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -135,7 +163,75 @@ model Memo {
   updatedAt        DateTime           @updatedAt
   portfolio        Portfolio          @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   trade            Trade?             @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+  factCheckRuns    FactCheckRun[]
 
   @@index([portfolioId, symbol, createdAt])
   @@index([portfolioId, tradeId])
+}
+
+model GoalMetric {
+  id            String        @id @default(cuid())
+  portfolioId    String
+  taxYear       Int
+  metricKey     GoalMetricKey
+  targetValue   Decimal       @db.Decimal(24, 8)
+  forecastValue Decimal       @db.Decimal(24, 8)
+  actualValue   Decimal       @db.Decimal(24, 8)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  portfolio     Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, taxYear, metricKey])
+  @@index([portfolioId, taxYear])
+}
+
+model TaxRuleSet {
+  id                 String       @id @default(cuid())
+  portfolioId        String
+  taxYear            Int
+  jurisdiction       String
+  lotMethod          TaxLotMethod
+  basicDeductionKrw  Decimal      @db.Decimal(24, 8)
+  rateTableVersion   String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  portfolio          Portfolio    @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, taxYear, jurisdiction, lotMethod])
+  @@index([portfolioId, taxYear])
+}
+
+model FactCheckRun {
+  id         String            @id @default(cuid())
+  portfolioId String
+  memoId     String
+  model      String
+  status     FactCheckRunStatus @default(COMPLETED)
+  confidence Decimal           @db.Decimal(8, 4)
+  disclaimer String
+  claimsJson Json
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  portfolio  Portfolio         @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  memo       Memo              @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  citations  SourceCitation[]
+
+  @@index([portfolioId, memoId, createdAt])
+}
+
+model SourceCitation {
+  id            String        @id @default(cuid())
+  portfolioId   String
+  factCheckRunId String
+  title         String
+  source        String
+  url           String?
+  publishedAt   DateTime?
+  stance        CitationStance
+  createdAt     DateTime      @default(now())
+  portfolio     Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  factCheckRun  FactCheckRun  @relation(fields: [factCheckRunId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, factCheckRunId])
+  @@index([portfolioId, stance, createdAt])
 }

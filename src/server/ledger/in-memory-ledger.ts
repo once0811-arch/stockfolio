@@ -238,6 +238,10 @@ export async function clearLedgerForTests(): Promise<void> {
   runtimeState.tradeLedger.length = 0;
   runtimeState.hasSeededDemoPortfolio = false;
 
+  if (process.env.NODE_ENV === "test" || !shouldUsePostgresByPolicy()) {
+    return;
+  }
+
   if (getPersistenceMode() === "memory") {
     return;
   }

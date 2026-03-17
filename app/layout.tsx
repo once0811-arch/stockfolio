@@ -7,6 +7,8 @@ import { getDemoMarketPriceOverrides } from "@/src/server/ledger/demo-portfolio"
 import { listTrades } from "@/src/server/ledger/in-memory-ledger";
 import { listMemos } from "@/src/server/memos/in-memory-memos";
 import { derivePortfolioOverview } from "@/src/server/portfolio/derive-portfolio-overview";
+import { AppShell, ThemeToggle, TopNav } from "@/src/ui/components";
+import "@/src/ui/design-system.css";
 import "./globals.css";
 
 const bodyFont = Noto_Sans_KR({
@@ -26,7 +28,7 @@ const monoFont = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Portfolio Ops Console",
+  title: "Portfolio Ops Desk",
   description: "Overseas equity portfolio operations system",
 };
 
@@ -59,50 +61,58 @@ export default async function RootLayout({
       <body
         className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
       >
-        <div className="market-grid" />
-        <div className="app-shell">
-          <header className="app-header">
-            <div className="brand-cluster">
-              <p className="brand-eyebrow">Portfolio Operations</p>
-              <p className="brand-title">KR Overseas Equity Desk</p>
-            </div>
-            <div className="market-pill-list" aria-label="market snapshot">
-              <p className="market-pill">
-                USD/KRW{" "}
-                <span>
-                  {overview.header.latestUsdKrw
-                    ? overview.header.latestUsdKrw.toFixed(2)
-                    : "-"}
-                </span>
+        <AppShell
+          header={
+            <>
+              <div>
+                <p className="ds-brand-eyebrow">Portfolio Operations</p>
+                <p className="ds-brand-title">KR Overseas Equity Desk</p>
+              </div>
+              <div className="ds-pill-row" aria-label="market snapshot">
+                <p className="ds-pill">
+                  USD/KRW{" "}
+                  <strong>
+                    {overview.header.latestUsdKrw
+                      ? overview.header.latestUsdKrw.toFixed(2)
+                      : "-"}
+                  </strong>
+                </p>
+                <p className="ds-pill">
+                  YTD P/L <strong>{formatSignedPct(ytdReturnPct)}</strong>
+                </p>
+                <p className="ds-pill">
+                  검증대기 메모 <strong>{overview.header.unresolvedMemoCount}건</strong>
+                </p>
+                <ThemeToggle />
+              </div>
+            </>
+          }
+          nav={
+            <TopNav
+              items={[
+                { href: "/dashboard", label: "Overview" },
+                { href: "/transactions", label: "Ledger" },
+                { href: "/research", label: "Research" },
+              ]}
+            />
+          }
+          footer={
+            <>
+              <p>금융 정보 제공 목적이며 투자 자문이 아닙니다.</p>
+              <p>
+                estimate / actual / target 수치는 분리 표기되며 원본 거래값은 보존됩니다.
               </p>
-              <p className="market-pill">
-                YTD P/L <span>{formatSignedPct(ytdReturnPct)}</span>
-              </p>
-              <p className="market-pill">
-                검증대기 메모 <span>{overview.header.unresolvedMemoCount}건</span>
-              </p>
-            </div>
-          </header>
-
-          <nav className="app-nav" aria-label="주요 화면">
-            <Link href="/dashboard">Overview</Link>
-            <Link href="/transactions">Ledger</Link>
-            <Link href="/research">Research</Link>
-          </nav>
-
-          <main className="app-main">{children}</main>
-
-          <footer className="app-footer">
-            <p>금융 정보 제공 목적이며 투자 자문이 아닙니다.</p>
-            <p className="footer-subtle">
-              estimate / actual / target 수치는 분리 표기되며 원본 거래값은 보존됩니다.
-            </p>
-            <div className="footer-links">
-              <Link href="/settings/methodology">Methodology</Link>
-              <Link href="/settings/data-sources">Data Sources</Link>
-            </div>
-          </footer>
-        </div>
+              <div className="ds-footer-links">
+                <Link href="/settings/methodology">Methodology</Link>
+                <Link href="/settings/data-sources">Data Sources</Link>
+                <Link href="/settings/goals">Goals</Link>
+                <Link href="/portfolio">Portfolio</Link>
+              </div>
+            </>
+          }
+        >
+          {children}
+        </AppShell>
       </body>
     </html>
   );

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { SegmentedControl, Toast } from "@/src/ui/components";
+
 type MemoItem = {
   id: string;
   symbol: string;
@@ -22,6 +24,13 @@ type FactCheckPayload = {
   supporting_evidence: Array<{ title: string; source: string }>;
   contradicting_evidence: Array<{ title: string; source: string }>;
   related_news: Array<{ title: string; source: string }>;
+  citations: Array<{
+    title: string;
+    source: string;
+    url?: string;
+    publishedAt?: string;
+    stance: "SUPPORTING" | "CONTRADICTING" | "RELATED_NEWS";
+  }>;
   confidence: number;
   citationCount: number;
   disclaimer: string;
@@ -147,22 +156,15 @@ export default function ResearchPage() {
       <section className="research-layout">
         <article className="panel-card">
             <p className="metric-label">검증 대기 메모 큐</p>
-            <div className="actions">
-              <button
-                className={queueFilter === "PENDING" ? "btn-primary" : "btn-secondary"}
-                onClick={() => setQueueFilter("PENDING")}
-                type="button"
-              >
-                대기 {pendingMemos.length}
-              </button>
-              <button
-                className={queueFilter === "ALL" ? "btn-primary" : "btn-secondary"}
-                onClick={() => setQueueFilter("ALL")}
-                type="button"
-              >
-                전체 {memos.length}
-              </button>
-            </div>
+            <SegmentedControl
+              ariaLabel="메모 큐 필터"
+              options={[
+                { value: "PENDING", label: `대기 ${pendingMemos.length}` },
+                { value: "ALL", label: `전체 ${memos.length}` },
+              ]}
+              value={queueFilter}
+              onChange={setQueueFilter}
+            />
             <ul className="data-list">
             {queueMemos.length === 0 ? (
               <li className="data-row">아직 등록된 메모가 없습니다.</li>
@@ -260,7 +262,22 @@ export default function ResearchPage() {
                 ))}
               </ul>
 
-              <p className="meta-row">{factCheckResult.disclaimer}</p>
+              <p className="metric-label">Citation metadata</p>
+              <ul className="data-list">
+                {factCheckResult.citations.map((item) => (
+                  <li className="data-row" key={`${item.title}-${item.source}-${item.stance}`}>
+                    [{item.stance}] {item.title}
+                    <p className="meta-row">{item.source}</p>
+                    {item.url ? (
+                      <a href={item.url} rel="noreferrer" target="_blank">
+                        {item.url}
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+
+              <Toast>{factCheckResult.disclaimer}</Toast>
             </>
           ) : null}
 

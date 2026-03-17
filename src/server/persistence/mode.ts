@@ -50,6 +50,12 @@ export function onPostgresFailure(error: unknown, context: string): void {
       : new Error(`PostgreSQL persistence failed in ${context}`);
   }
 
+  if (mode === "auto" && process.env.NODE_ENV === "production") {
+    throw error instanceof Error
+      ? error
+      : new Error(`PostgreSQL persistence failed in ${context}`);
+  }
+
   const message =
     error instanceof Error ? error.message : "unknown persistence error";
   autoPostgresDisabled = true;

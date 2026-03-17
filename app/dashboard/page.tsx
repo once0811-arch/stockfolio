@@ -6,10 +6,8 @@ import type { MarketPriceSeries } from "@/src/domain/market-data/types";
 import { getDemoMarketPriceOverrides } from "@/src/server/ledger/demo-portfolio";
 import { listTrades } from "@/src/server/ledger/in-memory-ledger";
 import { listMemos } from "@/src/server/memos/in-memory-memos";
-import {
-  derivePortfolioOverview,
-  type PortfolioHolding,
-} from "@/src/server/portfolio/derive-portfolio-overview";
+import { derivePortfolioOverview } from "@/src/server/portfolio/derive-portfolio-overview";
+import { Badge, Card, EmptyState, MetricTile, Table } from "@/src/ui/components";
 
 type MarketSnapshot = {
   symbol: string;
@@ -63,38 +61,6 @@ function formatPrice(value: number, currency: string): string {
   }
 }
 
-function buildRingGradient(holdings: PortfolioHolding[]): string {
-  if (holdings.length === 0) {
-    return "conic-gradient(#2a3650 0deg 360deg)";
-  }
-
-  const colors = [
-    "#53c5ff",
-    "#30d7b7",
-    "#ffd36b",
-    "#ff7a9a",
-    "#95a6c9",
-    "#74a7ff",
-    "#f8b978",
-    "#b48aff",
-  ];
-
-  let current = 0;
-  const segments = holdings.slice(0, 8).map((holding, index) => {
-    const sweep = holding.weight * 360;
-    const start = current;
-    const end = Math.min(360, current + sweep);
-    current = end;
-    return `${colors[index % colors.length]} ${start}deg ${end}deg`;
-  });
-
-  if (current < 360) {
-    segments.push(`#2a3650 ${current}deg 360deg`);
-  }
-
-  return `conic-gradient(${segments.join(", ")})`;
-}
-
 function buildSparklinePath(values: number[]): string {
   if (values.length < 2) {
     return "M 0 50 L 100 50";
@@ -136,6 +102,30 @@ function toMarketSnapshot(series: MarketPriceSeries): MarketSnapshot | null {
   };
 }
 
+function resolveRiskAlerts(input: {
+  holdingsLength: number;
+  isConcentrated: boolean;
+  concentratedSymbols: string[];
+  unresolvedMemos: number;
+}): string[] {
+  const alerts: string[] = [];
+
+  if (input.holdingsLength === 0) {
+    alerts.push("거래 원장이 비어 있어 포트폴리오 리스크를 계산할 수 없습니다.");
+  }
+  if (input.isConcentrated && input.concentratedSymbols.length > 0) {
+    alerts.push(`집중 리스크: ${input.concentratedSymbols.join(", ")} 비중이 높습니다.`);
+  }
+  if (input.unresolvedMemos > 0) {
+    alerts.push(`검증 대기 메모 ${input.unresolvedMemos}건이 남아 있습니다.`);
+  }
+  if (alerts.length === 0) {
+    alerts.push("현재 기준에서 즉시 경고할 집중/검증 이슈는 없습니다.");
+  }
+
+  return alerts;
+}
+
 export default async function DashboardPage() {
   noStore();
 
@@ -148,26 +138,15 @@ export default async function DashboardPage() {
   });
 
   const holdings = overview.holdings;
-  const ringGradient = buildRingGradient(holdings);
   const estimatedTax = 0;
   const unresolvedMemos = overview.header.unresolvedMemoCount;
 
-  const riskAlerts: string[] = [];
-  if (holdings.length === 0) {
-    riskAlerts.push("거래 원장이 비어 있어 포트폴리오 리스크를 계산할 수 없습니다.");
-  }
-  if (overview.risk.isConcentrated && overview.risk.concentratedSymbols.length > 0) {
-    riskAlerts.push(
-      `집중 리스크: ${overview.risk.concentratedSymbols.join(", ")} 비중이 높습니다.`,
-    );
-  }
-  if (unresolvedMemos > 0) {
-    riskAlerts.push(`검증 대기 메모 ${unresolvedMemos}건이 남아 있습니다.`);
-  }
-
-  if (riskAlerts.length === 0) {
-    riskAlerts.push("현재 기준에서 즉시 경고할 집중/검증 이슈는 없습니다.");
-  }
+  const riskAlerts = resolveRiskAlerts({
+    holdingsLength: holdings.length,
+    isConcentrated: overview.risk.isConcentrated,
+    concentratedSymbols: overview.risk.concentratedSymbols,
+    unresolvedMemos,
+  });
 
   const marketSnapshots = (
     await Promise.all(
@@ -187,91 +166,59 @@ export default async function DashboardPage() {
       <section className="hero-section">
         <h1 className="page-title">Overview</h1>
         <p className="page-description">
-          지금 필요한 판단부터 보여주도록 전체 포트폴리오 비중, 집중 리스크, 실행 우선순위를
-          한 화면에서 제공합니다.
+          목표치/예상치/확정치 분리 원칙을 유지하면서 포지션, 리스크, 실행 우선순위를 한
+          화면에서 확인합니다.
         </p>
+        <div className="hero-meta">
+          <Badge>KRW Reporting</Badge>
+          <Badge tone="positive">Estimate/Actual/Target Split</Badge>
+          <Badge tone="warning">No Investment Advice</Badge>
+        </div>
       </section>
 
       <section className="kpi-grid-6">
-        <article className="metric-card">
-          <p className="metric-label">총자산 (estimate)</p>
-          <p className="metric-value">{formatKrw(overview.totals.estimateAssetKrw)}</p>
-          <p className="meta-row">종목별 최신 FX snapshot KRW 환산</p>
-        </article>
-        <article className="metric-card">
-          <p className="metric-label">YTD 순수익 (estimate)</p>
-          <p
-            className={`metric-value ${
-              overview.totals.estimateYtdKrw >= 0
-                ? "metric-value-positive"
-                : "metric-value-warning"
-            }`}
-          >
-            {formatSignedKrw(overview.totals.estimateYtdKrw)}
-          </p>
-          <p className="meta-row">실현 + 미실현 합산</p>
-        </article>
-        <article className="metric-card">
-          <p className="metric-label">실현 / 미실현 (estimate)</p>
-          <p className="metric-value">
-            {formatSignedKrw(overview.totals.estimateRealizedKrw)} /{" "}
-            {formatSignedKrw(overview.totals.estimateUnrealizedKrw)}
-          </p>
-          <p className="meta-row">상태 분리 유지</p>
-        </article>
-        <article className="metric-card">
-          <p className="metric-label">배당 (actual/estimate)</p>
-          <p className="metric-value">- / -</p>
-          <p className="meta-row">데이터 연결 대기</p>
-        </article>
-        <article className="metric-card">
-          <p className="metric-label">세금 (estimate/finalized)</p>
-          <p className="metric-value">{formatKrw(estimatedTax)} / -</p>
-          <p className="meta-row">rule-engine 연결 대기</p>
-        </article>
-        <article className="metric-card">
-          <p className="metric-label">미검증 메모 수</p>
-          <p className="metric-value metric-value-warning">{unresolvedMemos}건</p>
-          <p className="meta-row">fact-check 대기</p>
-        </article>
+        <MetricTile
+          label="총자산 (estimate)"
+          value={formatKrw(overview.totals.estimateAssetKrw)}
+          description="종목별 최신 FX snapshot KRW 환산"
+        />
+        <MetricTile
+          label="YTD 순수익 (estimate)"
+          value={formatSignedKrw(overview.totals.estimateYtdKrw)}
+          description="실현 + 미실현 합산"
+          tone={overview.totals.estimateYtdKrw >= 0 ? "positive" : "warning"}
+        />
+        <MetricTile
+          label="실현 / 미실현 (estimate)"
+          value={`${formatSignedKrw(overview.totals.estimateRealizedKrw)} / ${formatSignedKrw(
+            overview.totals.estimateUnrealizedKrw,
+          )}`}
+          description="상태 분리 유지"
+        />
+        <MetricTile label="배당 (actual/estimate)" value="- / -" description="데이터 연결 대기" />
+        <MetricTile
+          label="세금 (estimate/finalized)"
+          value={`${formatKrw(estimatedTax)} / -`}
+          description="rule-engine 연결 대기"
+        />
+        <MetricTile
+          label="미검증 메모 수"
+          value={`${unresolvedMemos}건`}
+          description="fact-check 대기"
+          tone="warning"
+        />
       </section>
 
       <section className="card-grid-2">
-        <article className="panel-card">
-          <h2 className="panel-title-compact">보유 비중 (전체)</h2>
-          <div
-            style={{
-              width: "min(220px, 100%)",
-              aspectRatio: "1 / 1",
-              borderRadius: "50%",
-              margin: "0 auto",
-              background: ringGradient,
-              position: "relative",
-              border: "1px solid var(--line)",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: "22%",
-                borderRadius: "50%",
-                border: "1px solid var(--line)",
-                background: "var(--bg-card)",
-                display: "grid",
-                placeItems: "center",
-                textAlign: "center",
-              }}
-            >
-              <p className="metric-value">{holdings.length}</p>
-              <p className="meta-row">보유 종목</p>
-            </div>
-          </div>
-
-          <ul className="data-list">
-            {holdings.length === 0 ? (
-              <li className="data-row">보유 포지션이 없습니다.</li>
-            ) : (
-              holdings.map((holding) => (
+        <Card title="보유 비중 (전체)">
+          {holdings.length === 0 ? (
+            <EmptyState
+              title="보유 포지션이 없습니다."
+              description="Ledger에서 첫 거래를 입력하면 비중이 계산됩니다."
+            />
+          ) : (
+            <ul className="data-list">
+              {holdings.map((holding) => (
                 <li className="data-row" key={holding.symbol}>
                   <div className="section-header-inline">
                     <strong>{holding.symbol}</strong>
@@ -288,14 +235,12 @@ export default async function DashboardPage() {
                     {formatSignedPercent(holding.unrealizedPnlRatePct)}
                   </p>
                 </li>
-              ))
-            )}
-          </ul>
-        </article>
+              ))}
+            </ul>
+          )}
+        </Card>
 
-        <article className="panel-card">
-          <h2 className="panel-title-compact">리스크 경고 / 다음 액션</h2>
-
+        <Card title="리스크 경고 / 다음 액션">
           <ul className="alert-list">
             {riskAlerts.map((alert) => (
               <li className="alert-item" key={alert}>
@@ -321,56 +266,53 @@ export default async function DashboardPage() {
               </li>
             ))}
           </ul>
-        </article>
+        </Card>
       </section>
 
-      <section className="panel-card">
-        <h2 className="panel-title-compact">종목별 포지션</h2>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
+      <Card title="종목별 포지션">
+        <Table>
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>비중</th>
+              <th>수량</th>
+              <th>평균단가</th>
+              <th>현재가</th>
+              <th>수익률</th>
+              <th>평가 (est KRW)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {holdings.length === 0 ? (
               <tr>
-                <th>종목</th>
-                <th>비중</th>
-                <th>수량</th>
-                <th>평균단가</th>
-                <th>현재가</th>
-                <th>수익률</th>
-                <th>평가 (est KRW)</th>
+                <td colSpan={7}>보유 포지션이 없습니다.</td>
               </tr>
-            </thead>
-            <tbody>
-              {holdings.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>보유 포지션이 없습니다.</td>
+            ) : (
+              holdings.map((holding) => (
+                <tr key={holding.symbol}>
+                  <td>{holding.symbol}</td>
+                  <td>{(holding.weight * 100).toFixed(1)}%</td>
+                  <td>{formatQuantity(holding.openQuantity)}</td>
+                  <td>{formatPrice(holding.averageCostOriginal, holding.currency)}</td>
+                  <td>{formatPrice(holding.marketPriceOriginal, holding.currency)}</td>
+                  <td>{formatSignedPercent(holding.unrealizedPnlRatePct)}</td>
+                  <td>{formatKrw(holding.estimateValueKrw)}</td>
                 </tr>
-              ) : (
-                holdings.map((holding) => (
-                  <tr key={holding.symbol}>
-                    <td>{holding.symbol}</td>
-                    <td>{(holding.weight * 100).toFixed(1)}%</td>
-                    <td>{formatQuantity(holding.openQuantity)}</td>
-                    <td>
-                      {formatPrice(holding.averageCostOriginal, holding.currency)}
-                    </td>
-                    <td>{formatPrice(holding.marketPriceOriginal, holding.currency)}</td>
-                    <td>{formatSignedPercent(holding.unrealizedPnlRatePct)}</td>
-                    <td>{formatKrw(holding.estimateValueKrw)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              ))
+            )}
+          </tbody>
+        </Table>
+      </Card>
 
-      <section className="panel-card">
-        <h2 className="panel-title-compact">시세/배당 스냅샷 (무료 공개 API)</h2>
-        <ul className="data-list">
-          {marketSnapshots.length === 0 ? (
-            <li className="data-row">시세 데이터를 아직 불러오지 못했습니다.</li>
-          ) : (
-            marketSnapshots.map((item) => (
+      <Card title="시세/배당 스냅샷 (무료 공개 API)">
+        {marketSnapshots.length === 0 ? (
+          <EmptyState
+            title="시세 데이터를 아직 불러오지 못했습니다."
+            description="외부 데이터 제공자가 응답하면 스냅샷이 채워집니다."
+          />
+        ) : (
+          <ul className="data-list">
+            {marketSnapshots.map((item) => (
               <li className="data-row" key={item.symbol}>
                 <div className="section-header-inline">
                   <strong>{item.symbol}</strong>
@@ -384,7 +326,7 @@ export default async function DashboardPage() {
                   <path
                     d={item.sparklinePath}
                     fill="none"
-                    stroke="var(--accent)"
+                    stroke="var(--ds-primary)"
                     strokeWidth="3"
                     vectorEffect="non-scaling-stroke"
                   />
@@ -397,14 +339,13 @@ export default async function DashboardPage() {
                 </p>
                 <p className="meta-row">배당 이벤트 수 {item.dividendEventCount}</p>
               </li>
-            ))
-          )}
-        </ul>
-      </section>
+            ))}
+          </ul>
+        )}
+      </Card>
 
-      <section className="panel-card" id="forecast">
-        <h2 className="panel-title-compact">목표치 / 예상치 / 확정치</h2>
-        <table className="triple-table">
+      <Card title="목표치 / 예상치 / 확정치" description="핵심 metric은 3열로 항상 분리 표기합니다." id="forecast">
+        <Table>
           <thead>
             <tr>
               <th>Metric</th>
@@ -439,8 +380,8 @@ export default async function DashboardPage() {
               <td>{formatSignedKrw(overview.totals.estimateRealizedKrw)}</td>
             </tr>
           </tbody>
-        </table>
-      </section>
+        </Table>
+      </Card>
     </div>
   );
 }

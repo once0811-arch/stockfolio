@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { mergeQuickTradeWithDefaults } from "@/src/server/ledger/quick-trade-defaults";
+import { SegmentedControl, Toast } from "@/src/ui/components";
 
 type TradeItem = {
   id: string;
@@ -372,23 +373,16 @@ export function TransactionsClient({
         </p>
       </section>
 
-      <div className="mobile-tabs" role="tablist" aria-label="Ledger panels">
-        <button
-          aria-pressed={mobileTab === "ledger"}
-          className={mobileTab === "ledger" ? "btn-primary" : "btn-secondary"}
-          onClick={() => setMobileTab("ledger")}
-          type="button"
-        >
-          거래/포지션
-        </button>
-        <button
-          aria-pressed={mobileTab === "memo"}
-          className={mobileTab === "memo" ? "btn-primary" : "btn-secondary"}
-          onClick={() => setMobileTab("memo")}
-          type="button"
-        >
-          종목 메모
-        </button>
+      <div className="mobile-tabs">
+        <SegmentedControl
+          ariaLabel="Ledger panels"
+          options={[
+            { value: "ledger", label: "거래/포지션" },
+            { value: "memo", label: "종목 메모" },
+          ]}
+          value={mobileTab}
+          onChange={setMobileTab}
+        />
       </div>
 
       <div className="ledger-layout">
@@ -550,11 +544,11 @@ export function TransactionsClient({
                   {isFetchingFx ? "환율 조회 중..." : "환율 자동조회"}
                 </button>
               </div>
-              {fxNotice ? <p className="status-strip">{fxNotice}</p> : null}
+              {fxNotice ? <Toast>{fxNotice}</Toast> : null}
             </div>
           ) : null}
 
-          {tradeError ? <p className="error-text">{tradeError}</p> : null}
+          {tradeError ? <Toast tone="error">{tradeError}</Toast> : null}
 
           <div className="status-kpi-row">
             <article className="mini-kpi">
@@ -704,8 +698,8 @@ export function TransactionsClient({
             </button>
           </div>
 
-          {memoNotice ? <p className="status-strip">{memoNotice}</p> : null}
-          {memoError ? <p className="error-text">{memoError}</p> : null}
+          {memoNotice ? <Toast tone="success">{memoNotice}</Toast> : null}
+          {memoError ? <Toast tone="error">{memoError}</Toast> : null}
 
           <p className="metric-label">연결된 메모</p>
           <ul className="data-list">

@@ -28,10 +28,26 @@ describe("/api/fact-check/:memoId", () => {
 
     expect(run.status).toBe(200);
     const runPayload = (await run.json()) as {
-      factCheck: { confidence: number; citationCount: number; disclaimer: string };
+      factCheck: {
+        confidence: number;
+        citationCount: number;
+        disclaimer: string;
+        citations: Array<{
+          title: string;
+          source: string;
+          url?: string;
+          publishedAt?: string;
+          stance: "SUPPORTING" | "CONTRADICTING" | "RELATED_NEWS";
+        }>;
+      };
     };
     expect(runPayload.factCheck.citationCount).toBeGreaterThan(0);
     expect(runPayload.factCheck.disclaimer).toContain("투자 자문");
+    expect(runPayload.factCheck.citations.length).toBeGreaterThan(0);
+    expect(runPayload.factCheck.citations[0]?.stance).toBeDefined();
+    expect(runPayload.factCheck.citationCount).toBe(
+      runPayload.factCheck.citations.length,
+    );
 
     const list = await GET_MEMOS(
       new Request("http://localhost/api/memos?symbol=MSFT", {
@@ -42,6 +58,8 @@ describe("/api/fact-check/:memoId", () => {
       memos: Array<{ factCheckStatus: string; citationCount: number }>;
     };
     expect(listPayload.memos[0]?.factCheckStatus).toBe("COMPLETED");
-    expect(listPayload.memos[0]?.citationCount).toBeGreaterThan(0);
+    expect(listPayload.memos[0]?.citationCount).toBe(
+      runPayload.factCheck.citations.length,
+    );
   });
 });
